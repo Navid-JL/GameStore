@@ -35,8 +35,17 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddCors(
+    options =>
+        options.AddDefaultPolicy(builder =>
+        {
+            builder.WithOrigins("https://localhost:7224").AllowAnyHeader().AllowAnyMethod();
+        })
+);
 
 var app = builder.Build();
+
+app.UseCors();
 
 var group = app.MapGroup("/games").WithParameterValidation();
 
