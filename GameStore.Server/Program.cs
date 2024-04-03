@@ -40,10 +40,7 @@ app.UseHttpsRedirection();
 // GET /games
 group.MapGet(
     "/",
-    async (GameStoreContext context) =>
-    {
-        await context.Games.AsNoTracking().ToListAsync();
-    }
+    async (GameStoreContext context) => await context.Games.AsNoTracking().ToListAsync()
 );
 
 // GET/games/{id}
