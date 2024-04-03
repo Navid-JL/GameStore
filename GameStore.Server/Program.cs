@@ -38,7 +38,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-var group = app.MapGroup("/games");
+var group = app.MapGroup("/games").WithParameterValidation();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
