@@ -1,0 +1,36 @@
+@baseUrl = https://localhost:7216
+
+GET {{baseUrl}}/games HTTP/1.1
+
+###
+
+GET {{baseUrl}}/games/1 HTTP/1.1
+
+###
+
+POST {{baseUrl}}/games HTTP/1.1
+Content-Type: application/json
+
+{
+  "name": "Battlefield 4",
+  "genre": "Fighting",
+  "price": 59.99,
+  "releaseDate": "2014-09-14T00:00:00"
+}
+
+###
+
+PUT {{baseUrl}}/games/2 HTTP/1.1
+Content-Type: application/json
+
+{
+   "id": 2,
+   "name": "FIFA 17",
+   "genre": "Sports",
+   "price": 20.99,
+   "releaseDate": "2015-10-31"
+}
+
+###
+
+DELETE {{baseUrl}}/games/2 HTTP/1.1
