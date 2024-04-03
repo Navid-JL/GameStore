@@ -1,33 +1,7 @@
 using System.Text.RegularExpressions;
+using GameStore.Server.Data;
 using GameStore.Server.Models;
-
-List<Game> games = new List<Game>
-{
-    new Game()
-    {
-        Id = 1,
-        Name = "Battlefield 1",
-        Genre = "Fighting",
-        Price = 59.99M,
-        ReleaseDate = new DateTime(2015, 9, 14)
-    },
-    new Game()
-    {
-        Id = 2,
-        Name = "FIFA 16",
-        Genre = "Sports",
-        Price = 30.99M,
-        ReleaseDate = new DateTime(2015, 10, 31)
-    },
-    new Game()
-    {
-        Id = 3,
-        Name = "Red Dead Redemption",
-        Genre = "Roleplaying",
-        Price = 59.99M,
-        ReleaseDate = new DateTime(2019, 3, 10)
-    }
-};
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,6 +16,11 @@ builder.Services.AddCors(
             builder.WithOrigins("https://localhost:7224").AllowAnyHeader().AllowAnyMethod();
         })
 );
+
+// var connString = builder.Configuration.GetConnectionString("GameStoreContext");
+var connString = builder.Configuration["ConnectionStrings:GameStoreContext"];
+
+builder.Services.AddSqlServer<GameStoreContext>(connString);
 
 var app = builder.Build();
 
@@ -59,15 +38,21 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // GET /games
-group.MapGet("/", () => games);
+group.MapGet(
+    "/",
+    async (GameStoreContext context) =>
+    {
+        await context.Games.AsNoTracking().ToListAsync();
+    }
+);
 
 // GET/games/{id}
 group
     .MapGet(
         "/{id}",
-        (int id) =>
+        async (int id, GameStoreContext context) =>
         {
-            Game? game = games.Find((game) => game.Id == id);
+            Game? game = await context.Games.FindAsync(id);
             if (game is null)
             {
                 return Results.NotFound();
@@ -80,10 +65,10 @@ group
 // POST /games
 group.MapPost(
     "/",
-    (Game game) =>
+    async (Game game, GameStoreContext context) =>
     {
-        game.Id = games.Max(game => game.Id) + 1;
-        games.Add(game);
+        context.Games.Add(game);
+        await context.SaveChangesAsync();
 
         return Results.CreatedAtRoute("GetGame", new { id = game.Id }, game);
     }
@@ -92,37 +77,30 @@ group.MapPost(
 // PUT /games/{id}
 group.MapPut(
     "/{id}",
-    (int id, Game updatedGame) =>
+    async (int id, Game updatedGame, GameStoreContext context) =>
     {
-        Game? existingGame = games.Find((game) => game.Id == id);
+        var rowsAffected = await context.Games
+            .Where(game => game.Id == id)
+            .ExecuteUpdateAsync(
+                updates =>
+                    updates
+                        .SetProperty(game => game.Name, updatedGame.Name)
+                        .SetProperty(game => game.Genre, updatedGame.Genre)
+                        .SetProperty(game => game.Price, updatedGame.Price)
+                        .SetProperty(game => game.ReleaseDate, updatedGame.ReleaseDate)
+            );
 
-        if (existingGame is null)
-        {
-            updatedGame.Id = id;
-            games.Add(updatedGame);
-
-            return Results.CreatedAtRoute("GetGame", new { id = updatedGame.Id }, updatedGame);
-        }
-        existingGame.Name = updatedGame.Name;
-        existingGame.Genre = updatedGame.Genre;
-        existingGame.Price = updatedGame.Price;
-        existingGame.ReleaseDate = updatedGame.ReleaseDate;
-
-        return Results.NoContent();
+        return rowsAffected == 0 ? Results.NotFound() : Results.NoContent();
     }
 );
 
 group.MapDelete(
     "/{id}",
-    (int id) =>
+    async (int id, GameStoreContext context) =>
     {
-        Game? existingGame = games.Find((game) => game.Id == id);
-        if (existingGame is null)
-        {
-            return Results.NotFound();
-        }
-        games.Remove(existingGame);
-        return Results.NoContent();
+        var rowsAffected = await context.Games.Where(game => game.Id == id).ExecuteDeleteAsync();
+
+        return rowsAffected == 0 ? Results.NotFound() : Results.NoContent();
     }
 );
 
